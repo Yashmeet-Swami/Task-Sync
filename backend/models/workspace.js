@@ -30,6 +30,9 @@ const workspaceModel = new Schema(
   { timestamps: true }
 );
 
+workspaceModel.index({ "members.user": 1 });
+workspaceModel.index({ owner: 1 });
+
 const Workspace = mongoose.model("Workspace", workspaceModel);
 
 export default Workspace;
