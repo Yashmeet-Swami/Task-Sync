@@ -20,6 +20,12 @@ import {
   getMyTasks,
 } from "../controllers/task.js";
 import authMiddleware from "../middleware/auth-middleware.js";
+import { requireProjectPermission } from "../middleware/project-permission.js";
+import {
+  requireTaskPermission,
+  requireTaskUpdatePermission,
+} from "../middleware/task-permission.js";
+import { PROJECT_PERMISSIONS } from "../libs/permissions.js";
 import { z } from "zod";
 
 const router = express.Router();
@@ -33,6 +39,7 @@ router.post(
     }),
     body: taskSchema,
   }),
+  requireProjectPermission(PROJECT_PERMISSIONS.CREATE_TASK),
   createTask
 );
 
@@ -43,6 +50,7 @@ router.post(
     params: z.object({ taskId: z.string() }),
     body: z.object({ title: z.string() }),
   }),
+  requireTaskUpdatePermission(),
   addSubTask
 );
 
@@ -53,6 +61,7 @@ router.post(
     params: z.object({ taskId: z.string() }),
     body: z.object({ text: z.string() }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.COMMENT_TASK),
   addComment
 );
 
@@ -62,6 +71,7 @@ router.post(
   validateRequest({
     params: z.object({ taskId: z.string() }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.VIEW_PROJECT),
   watchTask
 );
 
@@ -71,6 +81,7 @@ router.post(
   validateRequest({
     params: z.object({ taskId: z.string() }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.ARCHIVE_TASK),
   archivedTask
 );
 
@@ -88,6 +99,7 @@ router.get(
       taskId: z.string(),
     }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.VIEW_PROJECT),
   getTaskById
 )
 
@@ -97,6 +109,7 @@ router.get(
   validateRequest({
     params: z.object({ resourceId: z.string() }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.VIEW_PROJECT, { taskParam: "resourceId" }),
   getActivityByResourceId
 );
 
@@ -106,6 +119,7 @@ router.get(
   validateRequest({
     params: z.object({ taskId: z.string() }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.VIEW_PROJECT),
   getCommentsByTaskId
 );
 
@@ -114,11 +128,12 @@ router.put(
   authMiddleware,
   validateRequest({
     params: z.object({ taskId: z.string(), subTaskId: z.string() }),
-    body: z.object({ 
+    body: z.object({
         completed: z.boolean().optional(),
         title: z.string().optional()
     }),
   }),
+  requireTaskUpdatePermission(),
   updateSubTask
 );
 
@@ -129,6 +144,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ title: z.string() }),
   }),
+  requireTaskUpdatePermission(),
   updateTaskTitle
 )
 
@@ -139,6 +155,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ description: z.string() }),
   }),
+  requireTaskUpdatePermission(),
   updateTaskDescription
 )
 
@@ -149,6 +166,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ status: z.string() }),
   }),
+  requireTaskUpdatePermission(),
   updateTaskStatus
 )
 
@@ -159,6 +177,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ assignees: z.array(z.string()) }),
   }),
+  requireTaskPermission(PROJECT_PERMISSIONS.ASSIGN_TASK_MEMBERS),
   updateTaskAssignees
 )
 
@@ -169,6 +188,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ priority: z.string() }),
   }),
+  requireTaskUpdatePermission(),
   updateTaskPriority
 );
 
@@ -179,6 +199,7 @@ router.put(
     params: z.object({ taskId: z.string() }),
     body: z.object({ dueDate: z.union([z.string(), z.date(), z.null()]) }),
   }),
+  requireTaskUpdatePermission(),
   updateTaskDueDate
 );
 

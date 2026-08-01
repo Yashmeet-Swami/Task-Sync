@@ -1,74 +1,36 @@
-import cors from "cors"
-import dotenv from "dotenv"
-import express from "express"
+import env from "./libs/env.js"
 import mongoose from "mongoose"
-import morgan from "morgan"
-import path from "path";
-import cookieParser from "cookie-parser";
 
-
-import routes from "./routes/index.js"
-import errorMiddleware from "./middleware/error-middleware.js";
-import { fileURLToPath } from 'url';
-
-// Required in ES Module scope:
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-
-
-dotenv.config()
-
-const app = express();
-
-const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    "http://localhost:5173",
-].filter(Boolean);
-
-app.use(cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST","DELETE","PUT"],
-    allowedHeaders:['Content-Type',"Authorization"],
-    credentials: true,
-    })
-);
-
-app.use(morgan("dev"));
-app.use(express.json());
-app.use(cookieParser());
+import app from "./app.js"
+import { ensureBucketExists } from "./libs/storage.js";
+import logger from "./libs/logger.js";
 
 //db connection
-mongoose.connect(process.env.MONGODB_URI).then(()=> 
-    console.log("DB connected successfully"))
-.catch((err)=> console.log("Failed to connect to DB:", err));
-app.use(express.json());
+mongoose.connect(env.MONGODB_URI).then(()=>
+    logger.info("DB connected successfully"))
+.catch((err)=> logger.error({ err }, "Failed to connect to DB"));
 
+ensureBucketExists().catch((err) => logger.error({ err }, "Failed to initialize storage bucket"));
 
-const PORT = process.env.PORT || 5000
+const PORT = env.PORT
 
-app.get("/", async (req, res) => {
-    res.status(200).json({
-        message: "Welcome to TaskSync API",
-    });
-});
-
-
-//http:localhost:500/api-v1/
-app.use("/api-v1",routes);
-
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use(errorMiddleware);
-
-//not found middleware
-app.use((req, res) => {
-    res.status(404).json({
-        message: "Not found"
-    })
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT}`);
 })
+
+const gracefulShutdown = (signal) => {
+    logger.info(`${signal} received: closing server gracefully`);
+    server.close(async () => {
+        try {
+            await mongoose.connection.close();
+            logger.info("HTTP server and DB connection closed");
+            process.exit(0);
+        } catch (error) {
+            logger.error({ err: error }, "Error during shutdown");
+            process.exit(1);
+        }
+    });
+};
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));

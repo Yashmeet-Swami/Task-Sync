@@ -42,6 +42,10 @@ const projectSchema = new Schema(
   { timestamps: true }
 );
 
+projectSchema.index({ "members.user": 1 });
+projectSchema.index({ workspace: 1, isArchived: 1 });
+projectSchema.index({ title: "text", description: "text" });
+
 const Project = mongoose.model("Project", projectSchema);
 
 export default Project;

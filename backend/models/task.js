@@ -64,6 +64,7 @@ taskSchema.index({ project: 1, status: 1 });
 taskSchema.index({ project: 1, priority: 1 });
 taskSchema.index({ project: 1, dueDate: 1 });
 taskSchema.index({ title: 1 });
+taskSchema.index({ title: "text", description: "text" });
 
 const Task = mongoose.model("Task", taskSchema);
 

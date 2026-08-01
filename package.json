@@ -1,5 +1,11 @@
 {
-  "dependencies": {
-    "cookie-parser": "^1.4.7"
+  "name": "tasksync-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
   }
 }
