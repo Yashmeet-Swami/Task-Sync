@@ -1,52 +1,23 @@
-// import sgMail from "@sendgrid/mail";
-
-// import dotenv from "dotenv";
-// dotenv.config();
-
-// sgMail.setApiKey(process.env.SEND_GRID_API);
-
-// const fromEmail = process.env.FROM_EMAIL;
-
-// export const sendEmail = async (to, subject, html) => {
-//     const msg = {
-//         to,
-//         from: `SkillHub <${fromEmail}>`,
-//         subject,
-//         html,
-//     };
-
-//     try {
-//         const [response] = await sgMail.send(msg);
-//         console.log("✅ Email sent successfully with status:", response.statusCode);
-//         console.log("📨 Headers:", response.headers);
-//         return true;
-//     } catch (error) {
-//         console.error("❌ SendGrid Error Response:", error?.response?.body || error.message);
-//         return false;
-//     }
-
-// };
-
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-dotenv.config();
+import env from "./env.js";
+import logger from "./logger.js";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: String(process.env.SMTP_SECURE || "true") === "true",
+  host: env.SMTP_HOST,
+  port: env.SMTP_PORT,
+  secure: env.SMTP_SECURE,
   connectionTimeout: 15000,
   greetingTimeout: 10000,
   socketTimeout: 20000,
   auth: {
-    user: process.env.EMAIL_USER?.trim(),
-    pass: process.env.EMAIL_PASS?.trim(),
+    user: env.EMAIL_USER,
+    pass: env.EMAIL_PASS,
   },
 });
 
 export const sendEmail = async (to, subject, html) => {
   const mailOptions = {
-    from: `"TaskSync" <${process.env.EMAIL_USER?.trim()}>`,
+    from: `"TaskSync" <${env.EMAIL_USER}>`,
     to,
     subject,
     html,
@@ -54,11 +25,10 @@ export const sendEmail = async (to, subject, html) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent:", info.response);
+    logger.info({ to, response: info.response }, "Email sent");
     return true;
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    logger.error({ err: error, to }, "Error sending email");
     return false;
   }
 };
-

@@ -36,7 +36,6 @@ const authMiddleware = async (req, res, next) => {
                 message: "Unauthorized",
             })
         }
-        //console.log(user);
         req.user = user;
         next();
 
@@ -53,7 +52,7 @@ const authMiddleware = async (req, res, next) => {
             });
         }
 
-        console.log(error);
+        req.log?.error({ err: error }, "Unexpected auth-middleware error");
         res.status(500).json({
             message: "Internal server error",
         })

@@ -1,4 +1,5 @@
 import ActivityLog from "../models/activity.js";
+import logger from "./logger.js";
 
 const recordActivity = async (
   userId,
@@ -16,7 +17,7 @@ const recordActivity = async (
       details,
     });
   } catch (error) {
-    console.log(error);
+    logger.error({ err: error }, "Failed to record activity log");
   }
 };
 
