@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -91,6 +92,9 @@ export const CreateTaskDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Task</DialogTitle>
+          <DialogDescription>
+            Add a new task to this project, including its status, priority, due date, and assignees.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>

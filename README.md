@@ -46,6 +46,43 @@ Sign-in Page
 
 
 
+## 🐳 Running with Docker (recommended for local dev)
+
+The full stack — backend, background email worker, frontend, MongoDB, Redis, a local email sandbox (Mailpit), and MinIO (S3-compatible object storage) — runs with one command, no cloud accounts, real SMTP credentials, or paid S3 bucket required:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:5000 |
+| Backend health check | http://localhost:5000/health |
+| Mailpit inbox (view verification/reset/invite emails here) | http://localhost:8025 |
+| MinIO console (view uploaded profile photos) | http://localhost:9001 (user/pass: `minioadmin`/`minioadmin`) |
+| MongoDB | localhost:27017 |
+| Redis | localhost:6379 |
+| Backend metrics (Prometheus scrape format) | http://localhost:5000/metrics |
+| Prometheus | http://localhost:9090 |
+| Grafana dashboard | http://localhost:3001 (anonymous viewer access; admin/admin to edit) |
+
+The backend container loads secrets (`JWT_SECRET`, `ARCJET_KEY`, etc.) from `backend/.env`, but overrides `MONGODB_URI`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_SECURE`, `REDIS_URL`, and `MINIO_*` to point at the local `mongo`, `mailpit`, `redis`, and `minio` containers instead of Atlas/Gmail/S3 — so signup, email verification, password reset, caching, and file uploads all work fully offline. A separate `worker` container processes queued emails (BullMQ + Redis) so the API never blocks on SMTP. Backend logs are structured JSON (Pino); request latency, cache hit rate, and email queue depth are all visible live on the pre-provisioned "TaskSync Overview" Grafana dashboard.
+
+Stop the stack with `docker compose down` (add `-v` to also wipe the MongoDB and MinIO volumes).
+
+## 🧪 Running the tests
+
+```bash
+cd backend && npm test    # 38 unit + integration tests (Vitest + Supertest + in-memory MongoDB)
+cd frontend && npm test   # 9 component tests (Vitest + React Testing Library)
+npx playwright test       # E2E golden path (requires `docker compose up` running first)
+```
+
+The backend and frontend suites are fully self-contained (no Docker required — the backend suite spins up its own in-memory MongoDB per test file). The Playwright suite drives a real browser against the actual running stack end-to-end (signup → email verification via Mailpit → login → workspace/project/task creation → logout), so it needs `docker compose up` running first.
+
 ## 📦 Installation
 
 ### 1. Clone the repo
