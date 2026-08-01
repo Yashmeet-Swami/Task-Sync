@@ -6,6 +6,7 @@ import projectRoutes from "./project.js";
 import taskRoutes from "./task.js";
 import userRoutes from "./user.js";
 import settingsRoutes from "./settings.js";
+import searchRoutes from "./search.js";
 
 
 
@@ -17,4 +18,5 @@ router.use("/projects", projectRoutes);
 router.use("/tasks" , taskRoutes);
 router.use("/users", userRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/search", searchRoutes);
 export default router;

@@ -18,7 +18,9 @@ import {
     verifyResetPasswordTokenAndResetPassword,
     refreshAccessToken,
     logoutUser,
+    logoutAllDevices,
 } from "../controllers/auth-controller.js";
+import authMiddleware from "../middleware/auth-middleware.js";
 
 
 const router = express.Router();
@@ -62,4 +64,5 @@ router.post(
 
 router.post("/refresh-token", refreshAccessToken);
 router.post("/logout", logoutUser);
+router.post("/logout-all", authMiddleware, logoutAllDevices);
 export default router;

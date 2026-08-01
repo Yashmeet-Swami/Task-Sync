@@ -7,8 +7,6 @@ import { Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUpdateProfilePhoto, useUserProfileQuery } from "@/hooks/use-user";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 export const ProfilePhotoUploader = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [preview, setPreview] = useState<string | null>(null);
@@ -29,12 +27,10 @@ export const ProfilePhotoUploader = () => {
 
   try {
     const result = await updateProfilePhoto(formData);
-    
-    // Use full backend URL including the domain
+
+    // profilePicture is already a fully-qualified storage URL
     if (result?.profilePicture) {
-      const imageUrl = `${BACKEND_URL}${result.profilePicture}`;
-      console.log("Image URL:", imageUrl); // Verify in console
-      setPreview(imageUrl);
+      setPreview(result.profilePicture);
     }
 
     toast.success("Photo updated!");
@@ -49,8 +45,7 @@ export const ProfilePhotoUploader = () => {
 };
 
 // For displaying existing profile picture
-const currentImageUrl = preview || 
-  (user?.profilePicture ? `${BACKEND_URL}${user.profilePicture}` : null);
+const currentImageUrl = preview || user?.profilePicture || null;
 
 
     const handleFileChange = () => {
