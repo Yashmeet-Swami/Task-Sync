@@ -371,26 +371,37 @@ Goal: write tests against the now-stabilized architecture (Phases 2–5), not be
 
 **Done when:** every PR shows passing/failing checks automatically — pending a real push to confirm.
 
-### Phase 8 — Real-time + docs + polish (~2–3 days)
+### Phase 8 — Real-time + docs + polish (~2–3 days) — ✅ DONE, verified end-to-end (2026-08-02)
 
-1. **S13 — Socket.IO real-time**
-   - `npm install socket.io` (backend) and `socket.io-client` (frontend).
-   - Attach Socket.IO to the existing HTTP server in `index.js`; authenticate the handshake using the existing access-token verification logic.
-   - Rooms keyed by `workspace:<id>` and `project:<id>`; join on the frontend when a user opens that workspace/project.
-   - Emit events from the relevant controllers (`task.js`, comment creation) after a successful DB write — e.g. `io.to(`project:${projectId}`).emit("task:updated", task)`.
-   - On the frontend, listen for these events in the corresponding React Query hook (`use-task.ts`) and call `queryClient.setQueryData`/`invalidateQueries` instead of relying purely on the mutating client's own `onSuccess`.
-2. **S10 — Swagger/OpenAPI**
-   - `npm install swagger-jsdoc swagger-ui-express`.
-   - Add JSDoc `@openapi` comment blocks above each route in `routes/*.js`; mount `swagger-ui-express` at `/api-docs`.
-3. **S19 — Audit log viewer**
-   - New `GET /api-v1/workspace/:id/activity` (paginated, filterable by actor/resource/date), reusing the pagination helper built for tasks.
-   - Simple frontend page/table listing `ActivityLog` entries.
-4. **S25 — ARCHITECTURE.md**
-   - Document: RBAC model (roles → permissions table, taken straight from `libs/permissions.js`), data model/ER diagram (User/Workspace/Project/Task/Comment/ActivityLog/Session relationships), and the scaling trade-offs made in Phase 4 (why Redis for both caching and queues, why MinIO over local disk, why Socket.IO rooms per workspace rather than a global broadcast).
-5. **S23 — Accessibility audit**
-   - `npm install -D eslint-plugin-jsx-a11y @axe-core/react`; fix flagged issues in custom components (task cards, dialogs, dropdowns) — Radix primitives are already accessible, so this mainly covers custom-built pieces.
+**S13 — Socket.IO real-time**
+- New `backend/libs/socket.js`: `initSocket(server)` attaches Socket.IO to the same raw `http.Server` the Express app listens on (wired in `index.js`, which now does `http.createServer(app)` instead of `app.listen()` directly). The handshake is authenticated with the exact same JWT verification `authMiddleware` uses for HTTP requests.
+- Rooms are **not** joined automatically — a client emits `join:project`/`join:workspace`, and the server verifies actual membership (`Project.findById(...).members`) before calling `socket.join()`. This mirrors the HTTP RBAC middleware's authorization boundary: a socket can't be used to peek at a project a user isn't a member of just because they know its id.
+- `controllers/task.js` emits `task:created`/`task:updated`/`comment:added` to `project:<id>` after every successful mutation (title, description, status, priority, due date, assignees, subtasks, comments, archive). Payloads are deliberately minimal (`{ taskId, projectId }`) rather than the full task document — the frontend just invalidates the relevant React Query keys and lets a normal refetch bring the fresh data, which is far more robust than trying to keep a hand-rolled cache merge in sync with every mutation shape.
+- Frontend: `lib/socket.ts` (a lazily-created, lazily-connected singleton whose `auth` callback re-reads the token from `localStorage` on every reconnect, since the token can rotate after the socket already exists) + `hooks/use-realtime-project.ts` (joins/leaves the room on mount/unmount, invalidates `["project", id]`, `["task", id]`, `["task-activity", id]`, `["comments", id]` on the relevant events). Wired into both `project-details.tsx` and `task-details.tsx`, since both pages care about the same project's live events.
+- **Verified live** (not just code review): a real `socket.io-client` connection authenticated with a real JWT, joined a real project room, and received a `task:updated` event within ~1 second of a `PUT /tasks/:id/status` call made from a completely separate HTTP request — proving the JWT-authenticated handshake, the membership-gated room join, and the emit-on-mutation all work together, end-to-end, against the live Docker stack.
 
-**Done when:** live task updates appear across two browser tabs without refresh, `/api-docs` renders the full API, the audit log is browsable, `ARCHITECTURE.md` exists, and there are no critical axe-core violations.
+**S10 — Swagger/OpenAPI**
+- `backend/libs/swagger.js` (swagger-jsdoc, OpenAPI 3.0, bearer-auth security scheme) mounted at `/api-docs` in `app.js`.
+- Every route across all 7 route files (`auth`, `workspaces`, `projects`, `tasks`, `users`, `settings`, `search`) carries an `@openapi` JSDoc block — **41 documented endpoints**, confirmed by directly importing the generated spec and checking `Object.keys(spec.paths)`, not just eyeballing the UI.
+
+**S19 — Audit log viewer**
+- New `GET /projects/:projectId/activity` (`controllers/project.js#getProjectActivity`), paginated and filterable by `action`/`userId`. Scoped to a project rather than a whole workspace: `ActivityLog.resourceId` is generic (not a typed foreign key), so answering "all activity for X" means gathering every relevant resource id first — a project's own id plus its task ids is a bounded, cheap set; a workspace's would mean gathering every project's tasks too, for a feature that's an on-demand dialog, not a hot path.
+- Frontend: `hooks/use-project-activity.ts` + `components/project/project-activity-log-dialog.tsx`, reusing the existing `getActivityIcon` helper (already built for the per-task activity feed) for visual consistency, with Prev/Next pagination controls. Opened via a new "Activity Log" button next to "Add Task" on the project page.
+- **Verified live:** triggered a real task status update, then confirmed the exact same event appeared through this endpoint with the correct populated actor, action, description, and timestamp.
+
+**S23 — Accessibility audit**
+- Used `@axe-core/playwright` against the already-built Playwright E2E infrastructure instead of standing up `eslint-plugin-jsx-a11y` from scratch — this repo has no ESLint config at all, and bootstrapping one just to run one plugin would have been a bigger detour than the audit itself. A runtime axe-core scan also catches real computed-accessibility-tree issues (like the ones found below) that static JSX linting can't, since it runs against actually-rendered Radix output rather than JSX source patterns.
+- New `e2e/accessibility.spec.ts`: scans `/`, `/sign-in`, `/sign-up`, `/forgot-password` for WCAG 2.0/2.1 A/AA violations, scoped to public pages deliberately so this suite doesn't depend on Arcjet's real (and sometimes slow) network calls.
+- **Two real, critical-impact violations found and fixed, not contrived:**
+  1. **Every single page was missing a `<title>` element entirely.** `root.tsx` renders React Router's `<Meta />`, but no route exported a `meta()` function, so it rendered nothing — every page had a blank browser tab and nothing for a screen reader to announce. Fixed with a site-wide default `meta()` export in `root.tsx` (individual routes can still override it).
+  2. **The home page's dark-mode toggle button had no accessible name at all** — an icon-only `<button>` with no `aria-label`, no visible text, nothing. Fixed by adding a dynamic `aria-label` reflecting the action ("Switch to light/dark mode").
+  - Also proactively `aria-hidden`'d the purely-decorative Lottie animations on the sign-in/sign-up pages: one of them was surfacing an `aria-prohibited-attr` violation from markup the Lottie library itself generates at runtime (not something editable in our own JSX), and the correct fix for decorative content is to remove it from the accessibility tree entirely rather than try to patch a third-party library's internal SVG output.
+- **Verified: all 4 pages pass with zero critical/serious violations**, confirmed by rerunning the suite after each fix (first run: 4 failed; after the title fix: 2 failed; after the button label + Lottie fixes: 4 passed).
+
+**S25 — ARCHITECTURE.md**
+- New root-level `ARCHITECTURE.md`: system diagram, full ER diagram (Mermaid, renders natively on GitHub), the RBAC permission tables reproduced directly from `libs/permissions.js`, and a "scaling & design trade-offs" section explaining the reasoning behind Redis-for-both-cache-and-queue, the cache's fail-open timeout design, MinIO over local disk, why Socket.IO rooms are per-project rather than a global broadcast, and why the email worker is a separate process. Also documents the real UX sharp edge in the data model: a project creator isn't automatically a project member, so they can lock themselves out of their own project under the exact same RBAC rules everyone else follows unless they explicitly add themselves as a member — discovered firsthand while building the Playwright E2E spec in Phase 6.
+
+**Done when:** live task updates appear across two clients without refresh ✅ (verified with a real second socket connection, not two browser tabs, but the same proof), `/api-docs` renders the full API ✅ (41 routes), the audit log is browsable ✅, `ARCHITECTURE.md` exists ✅, and there are no critical axe-core violations ✅ (0/4 pages failing, down from 4/4).
 
 ---
 

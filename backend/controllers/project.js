@@ -2,6 +2,7 @@ import asyncHandler from "../libs/async-handler.js";
 import { deleteCache, workspaceStatsCacheKey } from "../libs/cache.js";
 import Project from "../models/project.js";
 import Task from "../models/task.js";
+import ActivityLog from "../models/activity.js";
 import mongoose from "mongoose";
 
 const createProject = asyncHandler(async (req, res) => {
@@ -169,4 +170,39 @@ const getProjectTasks = asyncHandler(async (req, res) => {
   });
 });
 
-export { createProject, getProjectDetails, getProjectTasks };
+// Paginated, filterable audit trail for a project: everything ActivityLog
+// already records for the project itself and every task within it.
+const getProjectActivity = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20, action, userId } = req.query;
+  const project = req.project;
+
+  const resourceIds = [project._id, ...project.tasks];
+
+  const filter = { resourceId: { $in: resourceIds } };
+  if (action) filter.action = action;
+  if (userId) filter.user = userId;
+
+  const parsedPage = Math.max(1, parseInt(page));
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit)));
+
+  const [total, activity] = await Promise.all([
+    ActivityLog.countDocuments(filter),
+    ActivityLog.find(filter)
+      .populate("user", "name profilePicture")
+      .sort({ createdAt: -1 })
+      .skip((parsedPage - 1) * parsedLimit)
+      .limit(parsedLimit),
+  ]);
+
+  res.status(200).json({
+    activity,
+    pagination: {
+      total,
+      page: parsedPage,
+      limit: parsedLimit,
+      totalPages: Math.ceil(total / parsedLimit),
+    },
+  });
+});
+
+export { createProject, getProjectDetails, getProjectTasks, getProjectActivity };

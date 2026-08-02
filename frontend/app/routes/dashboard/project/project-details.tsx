@@ -1,6 +1,7 @@
 import { BackButton } from "@/components/back-button";
 import { Loader } from "@/components/ui/loader";
 import { CreateTaskDialog } from "@/components/task/create-task-dialog";
+import { ProjectActivityLogDialog } from "@/components/project/project-activity-log-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProjectPermissions } from "@/hooks/use-permissions";
 import { UseProjectQuery } from "@/hooks/use-project";
+import { useProjectRealtime } from "@/hooks/use-realtime-project";
 import { useDebounce } from "@/hooks/use-debounce";
 import { getProjectProgress } from "@/lib";
 import { cn } from "@/lib/utils";
 import type { Project, Task, TaskStatus } from "@/types";
 import { format } from "date-fns";
-import { AlertCircle, Calendar as CalendarIcon, CheckCircle, Clock, Plus, LayoutList, LayoutDashboard, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, CheckCircle, Clock, Plus, LayoutList, LayoutDashboard, Search, X, ChevronLeft, ChevronRight, History } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 
@@ -26,9 +28,11 @@ const ProjectDetails = () => {
     workspaceId: string;
   }>();
   const navigate = useNavigate();
+  useProjectRealtime(projectId);
 
   const [isCreateTask, setIsCreateTask] = useState(false);
-  
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+
   // Dual-view mode
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   
@@ -159,6 +163,15 @@ const ProjectDetails = () => {
               </div>
               <Progress value={projectProgress} className="h-2" />
             </div>
+
+            <Button
+              variant="outline"
+              className="h-11 px-5 font-medium"
+              onClick={() => setIsActivityLogOpen(true)}
+            >
+              <History className="mr-2 size-4" />
+              Activity Log
+            </Button>
 
             {canCreateTask && (
               <Button
@@ -459,6 +472,12 @@ const ProjectDetails = () => {
           projectMembers={project?.members as any}
         />
       )}
+
+      <ProjectActivityLogDialog
+        open={isActivityLogOpen}
+        onOpenChange={setIsActivityLogOpen}
+        projectId={projectId}
+      />
     </div>
   );
 };

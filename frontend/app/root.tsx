@@ -12,6 +12,15 @@ import "./app.css";
 import ReactQueryProvider from "./provider/react-query-provider";
 import { ThemeProvider } from "./context/theme-content";
 
+// Default document title/description - every page renders <Meta /> below, but
+// without at least one route providing a title, axe-core (and screen readers,
+// and browser tabs) see an empty <title>. Individual routes can override this
+// by exporting their own more specific `meta` function.
+export const meta: Route.MetaFunction = () => [
+  { title: "TaskSync - Project & Task Management" },
+  { name: "description", content: "Organize workspaces, projects, and tasks with your team." },
+];
+
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {

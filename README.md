@@ -68,6 +68,9 @@ This starts:
 | Backend metrics (Prometheus scrape format) | http://localhost:5000/metrics |
 | Prometheus | http://localhost:9090 |
 | Grafana dashboard | http://localhost:3001 (anonymous viewer access; admin/admin to edit) |
+| API docs (Swagger UI, 41 documented endpoints) | http://localhost:5000/api-docs |
+
+Live updates (task changes, comments) sync across clients in real time via Socket.IO - no polling, no manual refresh. See `ARCHITECTURE.md` for the system diagram, data model, RBAC tables, and the reasoning behind the key design/scaling decisions.
 
 The backend container loads secrets (`JWT_SECRET`, `ARCJET_KEY`, etc.) from `backend/.env`, but overrides `MONGODB_URI`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_SECURE`, `REDIS_URL`, and `MINIO_*` to point at the local `mongo`, `mailpit`, `redis`, and `minio` containers instead of Atlas/Gmail/S3 — so signup, email verification, password reset, caching, and file uploads all work fully offline. A separate `worker` container processes queued emails (BullMQ + Redis) so the API never blocks on SMTP. Backend logs are structured JSON (Pino); request latency, cache hit rate, and email queue depth are all visible live on the pre-provisioned "TaskSync Overview" Grafana dashboard.
 

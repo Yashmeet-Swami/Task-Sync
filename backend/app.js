@@ -5,11 +5,13 @@ import express from "express"
 import mongoose from "mongoose"
 import pinoHttp from "pino-http"
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
 
 import routes from "./routes/index.js"
 import errorMiddleware from "./middleware/error-middleware.js";
 import logger from "./libs/logger.js";
 import { register, metricsMiddleware } from "./libs/metrics.js";
+import swaggerSpec from "./libs/swagger.js";
 
 const app = express();
 
@@ -53,6 +55,8 @@ app.get("/metrics", async (req, res) => {
     res.set("Content-Type", register.contentType);
     res.end(await register.metrics());
 });
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //http:localhost:500/api-v1/
 app.use("/api-v1",routes);

@@ -64,8 +64,12 @@ const SignUp = () => {
         transition={{ duration: 0.5 }}
         className="bg-white rounded-2xl shadow-2xl flex w-full max-w-5xl overflow-hidden border border-indigo-100"
       >
-        {/* Lottie Animation */}
-        <div className="hidden md:flex w-1/2 bg-gradient-to-br from-blue-100 to-purple-100 items-center justify-center p-6">
+        {/* Lottie Animation - purely decorative, hidden from the accessibility tree
+            (also avoids exposing whatever ARIA the animation JSON's generated SVG carries) */}
+        <div
+          className="hidden md:flex w-1/2 bg-gradient-to-br from-blue-100 to-purple-100 items-center justify-center p-6"
+          aria-hidden="true"
+        >
           <Lottie
             animationData={LoginAnimation}
             loop
