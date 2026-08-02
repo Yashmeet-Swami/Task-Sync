@@ -23,6 +23,7 @@ const Homepage = () => {
       {/* Dark mode toggle */}
       <button
         onClick={() => setDarkMode(!darkMode)}
+        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
         className={`absolute top-6 right-6 z-50 p-2 rounded-full ${darkMode
           ? "bg-gray-700 hover:bg-gray-600 text-yellow-300"
           : "bg-gray-200 hover:bg-gray-300 text-gray-700"

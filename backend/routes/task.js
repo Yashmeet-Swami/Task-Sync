@@ -30,6 +30,32 @@ import { z } from "zod";
 
 const router = express.Router();
 
+/**
+ * @openapi
+ * /tasks/{projectId}/create-task:
+ *   post:
+ *     summary: Create a task in a project (requires CREATE_TASK permission)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: projectId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, status, priority, dueDate, assignees]
+ *             properties:
+ *               title: { type: string }
+ *               description: { type: string }
+ *               status: { type: string, enum: [To Do, In Progress, Done] }
+ *               priority: { type: string, enum: [Low, Medium, High] }
+ *               dueDate: { type: string, format: date }
+ *               assignees: { type: array, items: { type: string }, minItems: 1 }
+ *     responses:
+ *       201: { description: Task created }
+ *       403: { description: Missing CREATE_TASK permission }
+ */
 router.post(
   "/:projectId/create-task",
   authMiddleware,
@@ -43,6 +69,26 @@ router.post(
   createTask
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/add-subtask:
+ *   post:
+ *     summary: Add a subtask (manager can edit any task; contributor only tasks assigned to them)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title]
+ *             properties: { title: { type: string } }
+ *     responses:
+ *       201: { description: Subtask added }
+ *       403: { description: Not permitted to update this task }
+ */
 router.post(
   "/:taskId/add-subtask",
   authMiddleware,
@@ -54,6 +100,25 @@ router.post(
   addSubTask
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/add-comment:
+ *   post:
+ *     summary: Add a comment to a task (requires COMMENT_TASK permission)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [text]
+ *             properties: { text: { type: string } }
+ *     responses:
+ *       201: { description: Comment added }
+ */
 router.post(
   "/:taskId/add-comment",
   authMiddleware,
@@ -65,6 +130,17 @@ router.post(
   addComment
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/watch:
+ *   post:
+ *     summary: Toggle watching a task (any project member, including viewers)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Watch state toggled }
+ */
 router.post(
   "/:taskId/watch",
   authMiddleware,
@@ -75,6 +151,18 @@ router.post(
   watchTask
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/archived:
+ *   post:
+ *     summary: Toggle archiving a task (manager only)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Archive state toggled }
+ *       403: { description: Missing ARCHIVE_TASK permission }
+ */
 router.post(
   "/:taskId/archived",
   authMiddleware,
@@ -85,12 +173,33 @@ router.post(
   archivedTask
 );
 
+/**
+ * @openapi
+ * /tasks/my-tasks:
+ *   get:
+ *     summary: List tasks assigned to the current user, across all projects
+ *     tags: [Tasks]
+ *     responses:
+ *       200: { description: Task list }
+ */
 router.get(
   "/my-tasks",
   authMiddleware,
   getMyTasks
 )
 
+/**
+ * @openapi
+ * /tasks/{taskId}:
+ *   get:
+ *     summary: Get a task with its project (requires project membership)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Task and project }
+ *       403: { description: Not a member of this project }
+ */
 router.get(
   "/:taskId",
   authMiddleware,
@@ -103,6 +212,17 @@ router.get(
   getTaskById
 )
 
+/**
+ * @openapi
+ * /tasks/{resourceId}/activity:
+ *   get:
+ *     summary: Get the activity log for a task
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: resourceId, required: true, schema: { type: string }, description: "a task id" }
+ *     responses:
+ *       200: { description: Activity log entries for this task }
+ */
 router.get(
   "/:resourceId/activity",
   authMiddleware,
@@ -113,6 +233,17 @@ router.get(
   getActivityByResourceId
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/comments:
+ *   get:
+ *     summary: List comments on a task
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: Comment list }
+ */
 router.get(
   "/:taskId/comments",
   authMiddleware,
@@ -123,6 +254,27 @@ router.get(
   getCommentsByTaskId
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/update-subtask/{subTaskId}:
+ *   put:
+ *     summary: Update a subtask's title/completion
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *       - { in: path, name: subTaskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               completed: { type: boolean }
+ *               title: { type: string }
+ *     responses:
+ *       200: { description: Subtask updated }
+ *       404: { description: Subtask not found }
+ */
 router.put(
   "/:taskId/update-subtask/:subTaskId",
   authMiddleware,
@@ -137,6 +289,22 @@ router.put(
   updateSubTask
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/title:
+ *   put:
+ *     summary: Rename a task
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, required: [title], properties: { title: { type: string } } }
+ *     responses:
+ *       200: { description: Task updated }
+ */
 router.put(
   "/:taskId/title",
   authMiddleware,
@@ -148,6 +316,22 @@ router.put(
   updateTaskTitle
 )
 
+/**
+ * @openapi
+ * /tasks/{taskId}/description:
+ *   put:
+ *     summary: Update a task's description
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, required: [description], properties: { description: { type: string } } }
+ *     responses:
+ *       200: { description: Task updated }
+ */
 router.put(
   "/:taskId/description",
   authMiddleware,
@@ -159,6 +343,22 @@ router.put(
   updateTaskDescription
 )
 
+/**
+ * @openapi
+ * /tasks/{taskId}/status:
+ *   put:
+ *     summary: Update a task's status
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, required: [status], properties: { status: { type: string } } }
+ *     responses:
+ *       200: { description: Task updated }
+ */
 router.put(
   "/:taskId/status",
   authMiddleware,
@@ -170,6 +370,26 @@ router.put(
   updateTaskStatus
 )
 
+/**
+ * @openapi
+ * /tasks/{taskId}/assignees:
+ *   put:
+ *     summary: Reassign a task (manager only)
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [assignees]
+ *             properties: { assignees: { type: array, items: { type: string } } }
+ *     responses:
+ *       200: { description: Task updated }
+ *       403: { description: Missing ASSIGN_TASK_MEMBERS permission }
+ */
 router.put(
   "/:taskId/assignees",
   authMiddleware,
@@ -181,6 +401,22 @@ router.put(
   updateTaskAssignees
 )
 
+/**
+ * @openapi
+ * /tasks/{taskId}/priority:
+ *   put:
+ *     summary: Update a task's priority
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, required: [priority], properties: { priority: { type: string } } }
+ *     responses:
+ *       200: { description: Task updated }
+ */
 router.put(
   "/:taskId/priority",
   authMiddleware,
@@ -192,6 +428,25 @@ router.put(
   updateTaskPriority
 );
 
+/**
+ * @openapi
+ * /tasks/{taskId}/due-date:
+ *   put:
+ *     summary: Update (or clear) a task's due date
+ *     tags: [Tasks]
+ *     parameters:
+ *       - { in: path, name: taskId, required: true, schema: { type: string } }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [dueDate]
+ *             properties: { dueDate: { type: string, nullable: true, format: date } }
+ *     responses:
+ *       200: { description: Task updated }
+ */
 router.put(
   "/:taskId/due-date",
   authMiddleware,

@@ -116,11 +116,13 @@ const SignIn = () => {
           <h2 className="text-xl font-bold text-white">TaskSync</h2>
 
           <div className="mt-4 sm:mt-6">
-            <Lottie
-              animationData={loginAnimation}
-              loop
-              className="w-full max-w-[280px] sm:max-w-xs mx-auto"
-            />
+            <div aria-hidden="true">
+              <Lottie
+                animationData={loginAnimation}
+                loop
+                className="w-full max-w-[280px] sm:max-w-xs mx-auto"
+              />
+            </div>
             <h3 className="text-white text-lg font-semibold mt-4 sm:mt-6 text-center">Welcome to TaskSync</h3>
             <p className="text-blue-100 text-sm text-center mt-1">Organize your work and boost productivity</p>
           </div>

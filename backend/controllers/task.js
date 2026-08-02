@@ -2,6 +2,7 @@ import AppError from "../libs/app-error.js";
 import asyncHandler from "../libs/async-handler.js";
 import { recordActivity } from "../libs/index.js";
 import { deleteCache, workspaceStatsCacheKey } from "../libs/cache.js";
+import { emitToProject } from "../libs/socket.js";
 import ActivityLog from "../models/activity.js";
 import Comment from "../models/comment.js";
 import Task from "../models/task.js";
@@ -24,6 +25,7 @@ const createTask = asyncHandler(async (req, res) => {
   project.tasks.push(newTask._id);
   await project.save();
   await deleteCache(workspaceStatsCacheKey(project.workspace));
+  emitToProject(project._id.toString(), "task:created", { taskId: newTask._id, projectId: project._id });
 
   res.status(201).json(newTask);
 });
@@ -50,6 +52,7 @@ const updateTaskTitle = asyncHandler(async (req, res) => {
 
   task.title = title;
   await task.save();
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated task title from ${oldTitle} to ${title}`,
@@ -70,6 +73,7 @@ const updateTaskDescription = asyncHandler(async (req, res) => {
 
   task.description = description;
   await task.save();
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated task description from ${oldDescription} to ${newDescription}`,
@@ -88,6 +92,7 @@ const updateTaskStatus = asyncHandler(async (req, res) => {
   task.status = status;
   await task.save();
   await deleteCache(workspaceStatsCacheKey(req.project.workspace));
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated task status from ${oldStatus} to ${status}`,
@@ -105,6 +110,7 @@ const updateTaskAssignees = asyncHandler(async (req, res) => {
 
   task.assignees = assignees;
   await task.save();
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated task assignees from ${oldAssigneeCount} to ${assignees.length}`,
@@ -123,6 +129,7 @@ const updateTaskPriority = asyncHandler(async (req, res) => {
   task.priority = priority;
   await task.save();
   await deleteCache(workspaceStatsCacheKey(req.project.workspace));
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated task priority from ${oldPriority} to ${priority}`,
@@ -138,6 +145,7 @@ const addSubTask = asyncHandler(async (req, res) => {
 
   task.subtasks.push({ title, completed: false });
   await task.save();
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "created_subtask", "Task", taskId, {
     description: `created subtask ${title}`,
@@ -160,6 +168,7 @@ const updateSubTask = asyncHandler(async (req, res) => {
   if (completed !== undefined) subTask.completed = completed;
   if (title !== undefined) subTask.title = title;
   await task.save();
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_subtask", "Task", taskId, {
     description: `updated subtask ${subTask.title}`,
@@ -201,6 +210,7 @@ const addComment = asyncHandler(async (req, res) => {
 
   task.comments.push(newComment._id);
   await task.save();
+  emitToProject(task.project.toString(), "comment:added", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "added_comment", "Task", taskId, {
     description: `added comment ${text.substring(0, 50) + (text.length > 50 ? "..." : "")}`,
@@ -241,6 +251,7 @@ const archivedTask = asyncHandler(async (req, res) => {
   task.isArchived = !isArchived;
   await task.save();
   await deleteCache(workspaceStatsCacheKey(req.project.workspace));
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `${isArchived ? "unarchived" : "archived"} task ${task.title}`,
@@ -265,6 +276,7 @@ const updateTaskDueDate = asyncHandler(async (req, res) => {
   task.dueDate = dueDate ? new Date(dueDate) : null;
   await task.save();
   await deleteCache(workspaceStatsCacheKey(req.project.workspace));
+  emitToProject(task.project.toString(), "task:updated", { taskId, projectId: task.project });
 
   await recordActivity(req.user._id, "updated_task", "Task", taskId, {
     description: `updated due date`,

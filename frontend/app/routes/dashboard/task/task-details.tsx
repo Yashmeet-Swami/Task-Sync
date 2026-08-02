@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useArchivedTaskMutation, useTaskByIdQuery, useWatchTaskMutation } from "@/hooks/use-task";
+import { useProjectRealtime } from "@/hooks/use-realtime-project";
 import { useAuth } from "@/provider/auth-context";
 import type { Project, Task } from "@/types";
 import { formatDistanceToNow } from "date-fns";
@@ -66,6 +67,7 @@ const TaskDetails = () => {
         workspaceId: string;
     }>();
     const navigate = useNavigate();
+    useProjectRealtime(projectId);
 
     const { data, isLoading } = useTaskByIdQuery(taskId!) as {
         data: {

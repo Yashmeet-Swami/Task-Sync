@@ -1,8 +1,10 @@
 import env from "./libs/env.js"
 import mongoose from "mongoose"
+import http from "http"
 
 import app from "./app.js"
 import { ensureBucketExists } from "./libs/storage.js";
+import { initSocket } from "./libs/socket.js";
 import logger from "./libs/logger.js";
 
 //db connection
@@ -14,7 +16,11 @@ ensureBucketExists().catch((err) => logger.error({ err }, "Failed to initialize 
 
 const PORT = env.PORT
 
-const server = app.listen(PORT, () => {
+// Socket.IO needs the raw http.Server (it can't attach directly to an Express app).
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
     logger.info(`Server running on port ${PORT}`);
 })
 
